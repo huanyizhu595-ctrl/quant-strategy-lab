@@ -1,4 +1,4 @@
-"""Download and validate adjusted SPY daily bars from Alpaca."""
+"""Download and validate adjusted daily bars from Alpaca."""
 
 import json
 import os
@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 ENV_PATH = PROJECT_ROOT / ".env"
 
-TICKER = "SPY"
+TICKERS = ("NVDA", "MU", "MSFT")
 START_DATE = datetime(2016, 1, 1, tzinfo=UTC)
 END_DATE = datetime(2026, 11, 14, tzinfo=UTC)
 PRICE_COLUMNS = ["Open", "High", "Low", "Close", "Volume"]
@@ -54,7 +54,7 @@ def validate_prices(prices: pd.DataFrame) -> None:
         raise ValueError("Low is above Open or Close in at least one row")
 
 
-def normalize_alpaca_bars(bars: pd.DataFrame) -> pd.DataFrame:
+def normalize_alpaca_bars(bars: pd.DataFrame, ticker: str) -> pd.DataFrame:
     """Convert Alpaca's symbol/timestamp frame to local daily OHLCV data."""
 
     if bars is None or bars.empty:
@@ -64,9 +64,9 @@ def normalize_alpaca_bars(bars: pd.DataFrame) -> pd.DataFrame:
     if isinstance(data.index, pd.MultiIndex):
         symbol_level = "symbol" if "symbol" in data.index.names else 0
         try:
-            data = data.xs(TICKER, level=symbol_level)
+            data = data.xs(ticker, level=symbol_level)
         except KeyError as exc:
-            raise ValueError(f"Alpaca response does not contain {TICKER}") from exc
+            raise ValueError(f"Alpaca response does not contain {ticker}") from exc
 
     data = data.rename(
         columns={
@@ -105,13 +105,13 @@ def load_alpaca_credentials() -> tuple[str, str]:
     return api_key, secret_key
 
 
-def download_spy_data() -> None:
-    """Download, validate, and save an adjusted SPY daily snapshot."""
+def download_market_data() -> None:
+    """Download, validate, and save adjusted daily snapshots for all tickers."""
 
     api_key, secret_key = load_alpaca_credentials()
     client = StockHistoricalDataClient(api_key, secret_key)
     request = StockBarsRequest(
-        symbol_or_symbols=TICKER,
+        symbol_or_symbols=list(TICKERS),
         timeframe=TimeFrame.Day,
         start=START_DATE,
         end=END_DATE,
@@ -121,41 +121,45 @@ def download_spy_data() -> None:
     )
 
     bars = client.get_stock_bars(request).df
-    prices = normalize_alpaca_bars(bars)
-
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    prices_path = RAW_DATA_DIR / "SPY_daily_adjusted.parquet"
-    metadata_path = RAW_DATA_DIR / "SPY_metadata.json"
+    downloaded_at_utc = datetime.now(UTC).isoformat()
 
-    prices.to_parquet(prices_path)
+    for ticker in TICKERS:
+        prices = normalize_alpaca_bars(bars, ticker)
+        prices_path = RAW_DATA_DIR / f"{ticker}_daily_adjusted.parquet"
+        metadata_path = RAW_DATA_DIR / f"{ticker}_metadata.json"
+        prices.to_parquet(prices_path)
 
-    metadata = {
-        "provider": "Alpaca Market Data API",
-        "ticker": TICKER,
-        "feed": DataFeed.SIP.value,
-        "interval": "1Day",
-        "adjustment": Adjustment.ALL.value,
-        "start_requested": START_DATE.date().isoformat(),
-        "end_requested": END_DATE.date().isoformat(),
-        "downloaded_at_utc": datetime.now(UTC).isoformat(),
-        "first_date": prices.index.min().date().isoformat(),
-        "last_date": prices.index.max().date().isoformat(),
-        "rows": len(prices),
-        "columns": prices.columns.tolist(),
-        "missing_values": prices.isna().sum().to_dict(),
-    }
+        metadata = {
+            "provider": "Alpaca Market Data API",
+            "ticker": ticker,
+            "feed": DataFeed.SIP.value,
+            "interval": "1Day",
+            "adjustment": Adjustment.ALL.value,
+            "start_requested": START_DATE.date().isoformat(),
+            "end_requested": END_DATE.date().isoformat(),
+            "downloaded_at_utc": downloaded_at_utc,
+            "first_date": prices.index.min().date().isoformat(),
+            "last_date": prices.index.max().date().isoformat(),
+            "rows": len(prices),
+            "columns": prices.columns.tolist(),
+            "missing_values": prices.isna().sum().to_dict(),
+        }
 
-    metadata_path.write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+        metadata_path.write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
-    print(f"Download complete: {TICKER}")
-    print(f"Date range: {prices.index.min().date()} to {prices.index.max().date()}")
-    print(f"Rows: {len(prices):,}")
-    print(f"Adjusted prices: {prices_path}")
-    print(f"Metadata: {metadata_path}")
+        print(f"Download complete: {ticker}")
+        print(
+            f"Date range: {prices.index.min().date()} to "
+            f"{prices.index.max().date()}"
+        )
+        print(f"Rows: {len(prices):,}")
+        print(f"Adjusted prices: {prices_path}")
+        print(f"Metadata: {metadata_path}")
 
 
 if __name__ == "__main__":
-    download_spy_data()
+    download_market_data()

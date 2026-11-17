@@ -1,6 +1,6 @@
-# SPY Turtle S1/S2 Backtest
+# Multi-Ticker Turtle S1/S2 Backtest
 
-一个使用 Python 编写的 SPY 日线、只做多、无杠杆海龟交易系统回测项目。
+一个使用 Python 编写的美股日线、只做多、无杠杆海龟交易系统回测项目。当前对 NVDA、MU 和 MSFT 分别使用 100,000 美元独立回测，三个账户互不共享资金。
 
 项目实现 System 1 盈利突破过滤和 System 2 Fail-safe 入场，并使用经典海龟的波动率指标 `N`、单位规模、`2N` 初始止损和 `0.5N` 加仓规则。由于这是现金股票账户而不是期货保证金账户，最终仓位仍受现金与总名义金额限制。
 
@@ -8,20 +8,30 @@
 
 ## 回测图表
 
-### 资金曲线与回撤
+### NVDA
 
-![资金曲线与回撤](outputs/performance_overview.png)
+![NVDA资金曲线与回撤](outputs/NVDA/performance_overview.png)
 
-### 分年度收益
+![NVDA分年度收益](outputs/NVDA/yearly_returns.png)
 
-![分年度收益](outputs/yearly_returns.png)
+### MU
+
+![MU资金曲线与回撤](outputs/MU/performance_overview.png)
+
+![MU分年度收益](outputs/MU/yearly_returns.png)
+
+### MSFT
+
+![MSFT资金曲线与回撤](outputs/MSFT/performance_overview.png)
+
+![MSFT分年度收益](outputs/MSFT/yearly_returns.png)
 
 ## 策略规则
 
-- 标的：SPY
+- 标的：NVDA、MU、MSFT，分别独立运行
 - 周期：日线
 - 方向：只做多
-- 初始资金：100,000 美元
+- 初始资金：每只股票 100,000 美元
 - System 1：突破前 20 日最高价入场，跌破前 10 日最低价退出
 - System 1 过滤：前一次理论突破盈利时跳过下一次 20 日突破
 - System 2 Fail-safe：跳过 System 1 后，突破前 55 日最高价入场，跌破前 20 日最低价退出
@@ -39,14 +49,14 @@
 
 数据范围为 2016-01-04 至 2026-11-13，2026 年不是完整年度。
 
-| 指标 | 海龟 S1/S2 + N | SPY 买入持有 |
-|---|---:|---:|
-| 初始资金 | $100,000.00 | $100,000.00 |
-| 最终资产 | $135,641.39 | $435,831.56 |
-| 总收益率 | 35.64% | 335.83% |
-| 年化收益率 | 2.85% | 14.52% |
-| 最大回撤 | -12.15% | -33.40% |
-| 夏普比率（无风险利率为 0） | 0.55 | 0.87 |
+| 标的 | 组合 | 最终资产 | 总收益率 | 年化收益率 | 最大回撤 | 夏普比率 |
+|---|---|---:|---:|---:|---:|---:|
+| NVDA | 海龟 S1/S2 + N | $506,645.73 | 406.65% | 16.12% | -16.33% | 1.08 |
+| NVDA | 买入持有 | $20,301,415.62 | 20,201.42% | 63.12% | -66.29% | 1.24 |
+| MU | 海龟 S1/S2 + N | $373,681.46 | 273.68% | 12.91% | -21.73% | 0.78 |
+| MU | 买入持有 | $5,657,205.81 | 5,557.21% | 45.01% | -57.52% | 0.97 |
+| MSFT | 海龟 S1/S2 + N | $145,357.29 | 45.36% | 3.50% | -13.55% | 0.38 |
+| MSFT | 买入持有 | $1,087,507.68 | 987.51% | 24.58% | -37.04% | 0.94 |
 
 回测未计入佣金、税费和闲置现金利息。价格使用 Alpaca 提供的复权日线数据。
 
@@ -57,7 +67,7 @@
 ## 项目结构
 
 ```text
-donchian_spy/
+quant-strategy-lab/
 ├── src/
 │   ├── data.py          # Alpaca 数据下载与验证
 │   ├── strategy.py      # 唐奇安通道信号
@@ -65,7 +75,7 @@ donchian_spy/
 │   ├── backtest.py      # 逐日回测引擎
 │   └── reporting.py     # 指标、买入持有和图表
 ├── tests/               # 自动化测试
-├── outputs/             # 本地生成结果；Git 只跟踪两张示例图
+├── outputs/             # 按股票代码分目录；Git 只跟踪六张示例图
 ├── backtest_report.ipynb
 ├── run_backtest.py
 ├── requirements.txt

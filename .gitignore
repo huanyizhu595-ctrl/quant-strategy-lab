@@ -7,6 +7,8 @@ __pycache__/
 .ipynb_checkpoints/
 
 data/raw/
-outputs/*
-!outputs/performance_overview.png
-!outputs/yearly_returns.png
+outputs/**
+!outputs/
+!outputs/*/
+!outputs/*/performance_overview.png
+!outputs/*/yearly_returns.png

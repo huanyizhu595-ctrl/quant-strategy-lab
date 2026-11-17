@@ -89,7 +89,7 @@ def build_buy_hold_equity(
     prices: pd.DataFrame,
     config: BacktestConfig,
 ) -> BuyHoldResult:
-    """Buy SPY at the first open and hold using comparable cash constraints."""
+    """Buy the ticker at the first open and hold with comparable constraints."""
 
     if prices.empty:
         raise ValueError("Price data is empty")
@@ -181,6 +181,7 @@ def build_yearly_performance(
 def _save_performance_overview(
     equity_curve: pd.DataFrame,
     output_path: Path,
+    ticker: str,
 ) -> None:
     strategy = equity_curve["Equity"]
     benchmark = equity_curve["BuyHoldEquity"]
@@ -206,11 +207,12 @@ def _save_performance_overview(
     equity_axis.plot(
         benchmark.index,
         benchmark,
-        label="SPY buy & hold",
+        label=f"{ticker} buy & hold",
         color=benchmark_color,
         linewidth=2,
     )
-    equity_axis.set_title("Equity and drawdown comparison")
+    equity_axis.set_title(f"{ticker} equity comparison (log scale)")
+    equity_axis.set_yscale("log")
     equity_axis.set_ylabel("Portfolio value (USD)")
     equity_axis.yaxis.set_major_formatter(
         FuncFormatter(lambda value, _: f"${value:,.0f}")
@@ -231,7 +233,7 @@ def _save_performance_overview(
         benchmark_drawdown,
         color=benchmark_color,
         linewidth=1.5,
-        label="SPY buy & hold",
+        label=f"{ticker} buy & hold",
     )
     drawdown_axis.axhline(0, color="0.4", linewidth=0.8)
     drawdown_axis.set_ylabel("Drawdown")
@@ -245,7 +247,11 @@ def _save_performance_overview(
     plt.close(figure)
 
 
-def _save_yearly_returns(yearly: pd.DataFrame, output_path: Path) -> None:
+def _save_yearly_returns(
+    yearly: pd.DataFrame,
+    output_path: Path,
+    ticker: str,
+) -> None:
     positions = list(range(len(yearly)))
     width = 0.38
     strategy_color = "#1f77b4"
@@ -271,11 +277,11 @@ def _save_yearly_returns(yearly: pd.DataFrame, output_path: Path) -> None:
         [position + width / 2 for position in positions],
         yearly["BuyHoldReturn"],
         width,
-        label="SPY buy & hold",
+        label=f"{ticker} buy & hold",
         color=benchmark_color,
     )
     axis.axhline(0, color="0.35", linewidth=0.8)
-    axis.set_title("Calendar-year returns")
+    axis.set_title(f"{ticker} calendar-year returns")
     axis.set_ylabel("Return")
     axis.set_xticks(positions, labels)
     axis.yaxis.set_major_formatter(PercentFormatter(1.0))
@@ -315,6 +321,7 @@ def create_performance_report(
     result: BacktestResult,
     config: BacktestConfig,
     output_dir: Path,
+    ticker: str,
 ) -> tuple[dict[str, object], pd.DataFrame]:
     """Create benchmark data, annual analytics, charts, and comparison files."""
 
@@ -335,6 +342,7 @@ def create_performance_report(
             initial_equity=config.initial_cash,
         ),
         "benchmark_setup": {
+            "ticker": ticker,
             "shares": buy_hold.shares,
             "fill_price": buy_hold.fill_price,
             "remaining_cash": buy_hold.remaining_cash,
@@ -351,6 +359,7 @@ def create_performance_report(
     _save_performance_overview(
         equity_with_benchmark,
         output_dir / "performance_overview.png",
+        ticker,
     )
-    _save_yearly_returns(yearly, output_dir / "yearly_returns.png")
+    _save_yearly_returns(yearly, output_dir / "yearly_returns.png", ticker)
     return comparison, yearly
