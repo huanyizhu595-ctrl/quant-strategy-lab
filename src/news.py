@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pandas as pd
 import requests
 
-from src.data import RAW_DATA_DIR, TICKERS, load_required_env
+from src.mean_reversion_data import RAW_DATA_DIR, TICKERS, load_required_env
 
 MARKETAUX_URL = "https://api.marketaux.com/v1/news/all"
 NEWS_DIR = RAW_DATA_DIR / "news"

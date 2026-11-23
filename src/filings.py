@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 import pandas as pd
 import requests
 
-from src.data import RAW_DATA_DIR, START_DATE, TICKERS, load_required_env
+from src.mean_reversion_data import (
+    RAW_DATA_DIR,
+    START_DATE,
+    TICKERS,
+    load_required_env,
+)
 
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 SEC_SUBMISSIONS_FILE_URL = "https://data.sec.gov/submissions/{name}"
